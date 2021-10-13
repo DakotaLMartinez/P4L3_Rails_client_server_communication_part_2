@@ -6,6 +6,9 @@ Today's focus:
 - validating user input
 - using strong parameters to specify the allowed parameters for post/patch requests
 - returning appropriate status codes
+- mocking a `current_user` method in our `ApplicationController` that will return the logged in user when we've set up authentication (for now it'll just return the first user in our db)
+
+[RailsGuides on Validations](https://guides.rubyonrails.org/active_record_validations.html) will be important today
 
 ## Meetup Clone features list
 
@@ -34,6 +37,21 @@ ActiveSupport.on_load(:action_controller) do
   wrap_parameters format: []
 end
 ```
+
+We'll also want to add in the `current_user` method to the `ApplicationController` so we can use it later on when we need to create records in the controller that should belong to the logged in user.
+
+```rb
+class ApplicationController < ActionController::API
+  # ...
+  private
+
+  def current_user
+    User.first
+  end
+end
+```
+
+We can open up the rails console and check `User.first` to confirm that we actually have a User in our database that this method will return.
 
 ## My Process for Building out features
 If this is what the Request/Response flow looks like when we interact with our API using a React client application:
@@ -72,6 +90,37 @@ Depending on how our validations go, how should our controller action respond to
 | 500-599 | Server Error | Used to indicate that a request generated an error on the server side that needs to be fixed. When we see this during development, we need to check out network tab and rails server logs for a detailed error message. |
 
 See [railsstatuscodes.com](http://www.railsstatuscodes.com/) for a complete list with the corresponding symbols.
+
+The status code in the response allows us to indicate to the frontend whether or not the request was a success. The way that we interact with the status code from our client side code is by working with the [response object](https://developer.mozilla.org/en-US/docs/Web/API/Response) that fetch returns a [promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise) for.
+
+#### Example
+
+Fetch returns a promise for a response object. The first callback that we pass to `then` to consume that resolved promise value takes that response object as an argument. That response object has a status code and a body that we can read from.  When we do `response.json()` in the promise callback, we're parsing the body of the response from JSON string format to the data structure that it represents. The response object also has an `ok` property that indicates that the status code is between 200-299
+
+```js
+fetch('http://localhost:3000/groups', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  }, 
+  body: JSON.stringify({name: "Online Software Engineering 071921"})
+})
+  .then(response => {
+    if(response.ok) {
+      return response.json()
+    } else {
+      return response.json().then(errors => Promise.reject(errors))
+    }
+  })
+  .then(groups => {
+    console.log(groups) // happens if response was ok
+  })
+  .catch(errors => {
+    console.error(errors) // happens if response was not ok
+  })
+```
+
+If the response status is not in the 200-299 range, then ok will be false, so we'll want to return a rejected Promise for the response body parsed as json. We can then attach a catch callback to handle adding an error to state after it's caught by the catch callback.
 
 Let's make another version of the mvc-flow diagram that includes validations.
 
@@ -112,8 +161,7 @@ post '/groups', to: 'groups#create'
 class GroupsController < ApplicationController
   # ...
   def create 
-    group = Group.create(group_params)
-    render json: group
+    byebug
   end
 
   # ...
@@ -161,36 +209,9 @@ class GroupsController < ApplicationController
 end
 ```
 
-The status code in the response allows us to indicate to the frontend whether or not the request was a success. The way that we interact with the status code from our client side code is by working with the [response object](https://developer.mozilla.org/en-US/docs/Web/API/Response) that fetch returns a [promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise) for.
+### Testing
 
-#### Example
-
-Fetch returns a promise for a response object. The first callback that we pass to `then` to consume that resolved promise value takes that response object as an argument. That response object has a status code and a body that we can read from.  When we do `response.json()` in the promise callback, we're parsing the body of the response from JSON string format to the data structure that it represents. The response object also has an `ok` property that indicates that the status code is between 200-299
-
-```js
-fetch('http://localhost:3000/groups', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json'
-  }, 
-  body: JSON.stringify({name: "Online Software Engineering 071921"})
-})
-  .then(response => {
-    if(response.ok) {
-      return response.json()
-    } else {
-      return response.json().then(errors => Promise.reject(errors))
-    }
-  })
-  .then(events => {
-    console.log(events) // happens if response was ok
-  })
-  .catch(errors => {
-    console.error(errors) // happens if response was not ok
-  })
-```
-
-If the response status is not in the 200-299 range, then ok will be false, so we'll want to return a rejected Promise for the response body parsed as json. We can then attach a catch callback to handle adding an error to state after it's caught by the catch callback.
+Send the request twice to confirm that the creation works the first time and the uniqueness validation works the second time.
 
 ## Users must provide a :title, :location, :description, :start_time, :end_time when creating an event
 
@@ -240,8 +261,7 @@ post '/events', to: 'events#create'
 class EventsController < ApplicationController
   # ...
   def create 
-    event = Event.create(event_params)
-    render json: event
+    byebug
   end
 
   # ...
@@ -290,35 +310,9 @@ class EventsController < ApplicationController
 end
 ```
 
-```js
-fetch('http://localhost:3000/events',{
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    title: 'Rails Client/Server Communication part 1',
-    description: 'Validations, strong parameters, mass assignment, status codes and the create action',
-    location: 'online',
-    start_time: "2021-09-21T11:00:00",
-    end_time: "2021-09-21T13:00:00",
-    group_id: 1
-  })
-})
-  .then(response => {
-    if(response.ok) {
-      return response.json()
-    } else {
-      return response.json().then(errors => Promise.reject(errors))
-    }
-  })
-  .then(events => {
-    console.log(events) // if response was ok
-  })
-  .catch(errors => {
-    console.error(errors) // if response was not ok
-  })
-```
+### Testing
+
+Send the request twice to confirm that the creation works the first time and the uniqueness validation works the second time.
 
 ## Users can RSVP to events
 
@@ -354,30 +348,15 @@ post '/user_events', to: 'user_events#create'
 
 ### Controller
 
-For this functionality, users will only be able to add themselves to an event at the moment, so our API will need a way of knowing which user is making the request. Next week, we'll learn about how to do this for real, but for now, we're going to add a method called `current_user` to our application controller that just returns one of the users we created within the `db/seeds.rb` file. 
+For this functionality, users will only be able to add themselves to an event at the moment, so our API will need a way of knowing which user is making the request. Next week, we'll learn about how to do this for real, but for now, we're going to use the method called `current_user` in our application controller that just returns one of the users we created within the `db/seeds.rb` file. 
 
-If we need to simulate being logged in as another user, we can update the `current_user` method to return the user we want to switch to. We'll replace this method later, but for now it will help us to build out functionality on the server that requires knowledge of the currently logged in user without actually having authentication set up yet.
-
-```rb
-class ApplicationController < ActionController::Base
-  # ...
-
-  private
-
-  def current_user
-    User.first
-  end
-end
-```
-
-Then, within the other controller, we'll use the current_user method to build the associated object.
+If we need to simulate being logged in as another user, we can update the `current_user` method to return the user we want to switch to. We'll replace this method later, but for now it will help us to build out functionality on the server that requires knowledge of the currently logged in user without actually having authentication set up yet. Within the other controller, we'll use the current_user method to build the associated object.
 
 ```rb
 class UserEventsController < ApplicationController
   # ...
   def create
-    user_event = current_user.user_events.create(user_event_params)
-    render json: user_event
+    byebug
   end
 
   # ...
@@ -390,6 +369,7 @@ end
 ```
 ### Model
 We want to ensure that we aren't creating multiple user events for the same combination of user and event as that would serve no purpose here.
+
 ```rb
 class UserEvent < ApplicationRecord
   belongs_to :user
@@ -399,6 +379,16 @@ class UserEvent < ApplicationRecord
 end
 ```
 
+In this case, the error message we get will be "event_id is already taken" which is less clear than it could be. So we can customize the error message by adding another option to the hash we pass to uniqueness.
+
+```rb
+class UserEvent < ApplicationRecord
+  belongs_to :user
+  belongs_to :event
+
+  validates :event_id, uniqueness: { scope: :user_id, message: "Can't rsvp for the same event twice" }
+end
+```
 ### Response
 
 We want our API to check if we've successfully created an event or if some validation error prevented the save. To do this, we'll need to add some conditional logic to the create action:
@@ -407,7 +397,7 @@ We want our API to check if we've successfully created an event or if some valid
 class UserEventsController < ApplicationController
   # ...
   def create
-    user_event = current_user.user_events.create(user_event_params)
+    user_event = current_user.user_events.new(user_event_params)
     if user_event.save
       render json: user_event, status: :created # 201 status code
     else 
@@ -423,32 +413,9 @@ class UserEventsController < ApplicationController
   end
 end
 ```
+### Testing
 
-```js
-fetch('http://localhost:3000/user_events',{
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    group_id: 1
-  })
-})
-  .then(response => {
-    if(response.ok) {
-      return response.json()
-    } else {
-      return response.json().then(errors => Promise.reject(errors))
-    }
-  })
-  .then(events => {
-    console.log(events) // if response was ok
-  })
-  .catch(errors => {
-    console.error(errors) // if response was not ok
-  })
-```
-
+Send the request twice to confirm that the creation works the first time and the uniqueness validation works the second time.
 
 ## Users can join other groups
 
@@ -488,8 +455,7 @@ post '/user_groups', to: 'user_groups#create'
 class UserGroupsController < ApplicationController
   # ...
   def create
-    user_group = current_user.user_groups.create(user_group_params)
-    render json: user_group
+    byebug
   end
 
   # ...
@@ -536,27 +502,4 @@ class UserGroupsController < ApplicationController
 end
 ```
 
-```js
-fetch('http://localhost:3000/user_groups',{
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    group_id: 1
-  })
-})
-  .then(response => {
-    if(response.ok) {
-      return response.json()
-    } else {
-      return response.json().then(errors => Promise.reject(errors))
-    }
-  })
-  .then(user_group => {
-    console.log(user_group) // if response was ok
-  })
-  .catch(errors => {
-    console.error(errors) // if response was not ok
-  })
-```
+After a break, we'll start our [exercise on the Reading list application](./EXERCISE.md)
