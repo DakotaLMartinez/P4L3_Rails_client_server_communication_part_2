@@ -9,15 +9,15 @@ Today's focus:
 
 ## Meetup Clone features list
 
-- Users can create groups
-  - groups must provide a unique name
-- Users can create events
+- As a User, I can create groups
+  - groups must have a unique name
+- As a User, I can create events
   - events must have a :title, :location, :description, :start_time, :end_time 
   - The title must be unique given the same location and start time
-- Users can RSVP to events
-  - they can only rsvp to the same event once
-- Users can join other groups
-  - they can only join a group once
+- As a User, I can RSVP to events
+  - I can only rsvp to the same event once
+- As a User, I can join groups
+  - I can only join a group once
 
 Before we hop into coding today, there's a configuration option that we're going to want to change. When we start talking about strong parameters in our controllers, rails is going to do some magic with the params that we pass in via POSTMAN or fetch and add the name of our resource as a key containing all of the attributes we're posting. If we want to disable this feature, we can do so once at the beginning by editing the `config/intializers/wrap_parameters.rb` file. It currently looks like this:
 
