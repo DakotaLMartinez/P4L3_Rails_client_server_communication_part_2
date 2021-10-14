@@ -172,7 +172,7 @@ If the response status is not in the 200-299 range, then ok will be false, so we
 
 Let's make another version of the mvc-flow diagram that includes validations.
 
-![mvc flow with validations](./mvc-flow-with-validations.png)
+![mvc flow with validations](./mvc-flow-with-validations-create.png)
 
 ## Users must provide a unique name when creating a group
 
