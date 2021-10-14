@@ -331,6 +331,7 @@ NO
 ## Users can leave a group
 
 ### Request
+
 <details>
   <summary>
     What request method do we need? GET/POST/PATCH or DELETE?
@@ -426,7 +427,7 @@ NO
   <hr/>
 
 </details>
-
+<br/>
 <details>
   <summary>
     Any changes needed to the database to support this request?
