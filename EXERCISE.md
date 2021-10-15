@@ -6,7 +6,6 @@ Today's focus:
 
 # Reading List Application
 
-
 - Users can update whether or not they have read a book
 - Users can remove a book from their reading list
 ## Users can update whether or not they have read a book
