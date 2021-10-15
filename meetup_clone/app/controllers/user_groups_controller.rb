@@ -8,6 +8,10 @@ class UserGroupsController < ApplicationController
     end
   end
 
+  def destroy
+    UserGroup.find(params[:id]).destroy
+  end
+
   private
 
   def user_group_params
